@@ -6,21 +6,8 @@ A comprehensive security audit demonstrating a critical access control vulnerabi
 
 This project demonstrates a **critical access control vulnerability** where unauthorized users can take complete ownership of a smart contract and steal all funds. It includes both vulnerable and secure implementations, along with comprehensive testing and an interactive web demonstration.
 
-## 🎥 Demo Video
-
-Watch the complete vulnerability demonstration:
-
-[![Access Control Vulnerability Demo](https://img.shields.io/badge/▶️-Watch%20Demo-red?style=for-the-badge&logo=youtube)](YOUR_VIDEO_URL_HERE)
-
-> **Video walkthrough includes:**
-> - Initial state: Owner deposits 1 ETH into VulnerableBank
-> - Attack execution: Unauthorized user changes ownership
-> - Fund theft: Attacker drains all contract funds
-> - Security validation: SecureBank blocks the same attack with "Not owner!" error
-
-**Duration:** ~2-3 minutes
-
-*Replace `YOUR_VIDEO_URL_HERE` with your actual video link (YouTube, Vimeo, or direct link)*
+### 🎥 Demo Video
+[![Watch Demo](https://img.youtube.com/vi/JUdRTMknOAo/0.jpg)](https://youtu.be/JUdRTMknOAo)
 
 ## 🚨 Vulnerability Demonstrated
 
