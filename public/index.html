@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Control Vulnerability Demo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <h1>🔐 Access Control Vulnerability Audit</h1>
+            <p class="subtitle">Smart Contract Security Demonstration</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        
+        <!-- Connection Section -->
+        <section id="connectionSection" class="connection-section">
+            <div class="connection-card">
+                <h2>🔗 Wallet Connection</h2>
+                <div id="connectionStatus" class="connection-status disconnected">
+                    ❌ Not Connected
+                </div>
+                <div id="accountInfo" class="account-info hidden">
+                    <p><strong>Account:</strong> <span id="accountAddress">-</span></p>
+                    <p><strong>Balance:</strong> <span id="accountBalance">-</span> ETH</p>
+                </div>
+                <button id="connectBtn" class="btn btn-primary">Connect MetaMask</button>
+                <button id="deployBtn" class="btn btn-secondary hidden">Deploy Contracts</button>
+                <p class="info-text">Make sure MetaMask is set to <strong>Localhost 8545</strong></p>
+            </div>
+        </section>
+
+        <!-- Main Demo Section -->
+        <section id="mainSection" class="main-section hidden">
+            
+            <!-- Vulnerable Bank -->
+            <div class="contracts-grid">
+                <div class="contract-card vulnerable">
+                    <div class="card-header">
+                        <h2>❌ Vulnerable Bank</h2>
+                        <span class="badge vulnerable-badge">HIGH RISK</span>
+                    </div>
+                    
+                    <div class="contract-info">
+                        <p><strong>Status:</strong> <span id="vuln-status">-</span></p>
+                        <p><strong>Owner:</strong></p>
+                        <p class="address-text" id="vuln-owner">-</p>
+                        <p><strong>Contract Balance:</strong> <span id="vuln-balance">0</span> ETH</p>
+                        <p><strong>Your Balance in Contract:</strong> <span id="vuln-user-balance">0</span> ETH</p>
+                    </div>
+
+                    <div class="vulnerability-info">
+                        <h3>⚠️ Vulnerability</h3>
+                        <p>Missing access control on <code>changeOwner()</code> function. <strong>ANYONE can become owner!</strong></p>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn btn-action" onclick="vulnDeposit()">Deposit 1 ETH</button>
+                        <button class="btn btn-action" onclick="vulnWithdraw()">Withdraw Your Balance</button>
+                        <button class="btn btn-danger" onclick="vulnChangeOwner()">Change Owner (Attack!)</button>
+                        <button class="btn btn-action" onclick="vulnEmergencyWithdraw()">Withdraw Contract Balance</button>
+                        <button class="btn btn-secondary" onclick="refreshVulnerable()">Refresh</button>
+                    </div>
+                </div>
+
+                <!-- Secure Bank -->
+                <div class="contract-card secure">
+                    <div class="card-header">
+                        <h2>✅ Secure Bank</h2>
+                        <span class="badge secure-badge">SECURE</span>
+                    </div>
+                    
+                    <div class="contract-info">
+                        <p><strong>Status:</strong> <span id="sec-status">-</span></p>
+                        <p><strong>Owner:</strong></p>
+                        <p class="address-text" id="sec-owner">-</p>
+                        <p><strong>Contract Balance:</strong> <span id="sec-balance">0</span> ETH</p>
+                        <p><strong>Your Balance in Contract:</strong> <span id="sec-user-balance">0</span> ETH</p>
+                    </div>
+
+                    <div class="security-info">
+                        <h3>🛡️ Security Fix</h3>
+                        <p>Access control with <code>onlyOwner</code> modifier protects sensitive functions. <strong>Only owner can act!</strong></p>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn btn-action" onclick="secDeposit()">Deposit 1 ETH</button>
+                        <button class="btn btn-action" onclick="secWithdraw()">Withdraw Your Balance</button>
+                        <button class="btn btn-danger" onclick="secChangeOwner()">Try Change Owner</button>
+                        <button class="btn btn-action" onclick="secEmergencyWithdraw()">Withdraw Contract Balance</button>
+                        <button class="btn btn-secondary" onclick="refreshSecure()">Refresh</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transaction Log -->
+            <section class="log-section">
+                <h2>📋 Transaction Log</h2>
+                <div id="transactionLog" class="transaction-log">
+                    <p class="log-empty">Waiting for interactions...</p>
+                </div>
+                <button id="clearLogBtn" class="btn btn-secondary" onclick="clearLog()">Clear Log</button>
+            </section>
+
+            <!-- Instructions -->
+            <section class="instructions-section">
+                <h2>📖 How to Use This Demo</h2>
+                <div class="instructions">
+                    <div class="instruction">
+                        <h4>1. Connect Your Wallet</h4>
+                        <p>Click "Connect MetaMask" and select an account. Make sure MetaMask is connected to Localhost 8545!</p>
+                    </div>
+                    <div class="instruction">
+                        <h4>2. Deploy Contracts (if needed)</h4>
+                        <p>If contracts aren't already deployed, you'll see a deploy button. Click it!</p>
+                    </div>
+                    <div class="instruction">
+                        <h4>3. Test Vulnerability</h4>
+                        <p>In VulnerableBank, click "Change Owner" without being the owner. <strong>It will succeed!</strong> This is the vulnerability.</p>
+                    </div>
+                    <div class="instruction">
+                        <h4>4. Test Security</h4>
+                        <p>In SecureBank, click "Try Change Owner" without being the owner. <strong>It will fail with "Not owner!"</strong> This is the fix.</p>
+                    </div>
+                    <div class="instruction">
+                        <h4>5. Steal Funds (Vulnerable Only)</h4>
+                        <p>After becoming owner of VulnerableBank, click "Emergency Withdraw" to steal all funds!</p>
+                    </div>
+                </div>
+            </section>
+        </section>
+
+        <!-- Error Section -->
+        <section id="errorSection" class="error-section hidden">
+            <h2>⚠️ Error</h2>
+            <p id="errorMessage">An error occurred</p>
+            <button class="btn btn-primary" onclick="window.location.reload()">Reload Page</button>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>Access Control Vulnerability Audit • Smart Contract Security Demo</p>
+    </footer>
+
+    <!-- Contract Addresses Modal -->
+    <div id="addressModal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddressModal()">&times;</span>
+            <h2>Contract Addresses</h2>
+            <div class="address-form">
+                <div>
+                    <label>VulnerableBank Address:</label>
+                    <input type="text" id="vulnAddress" placeholder="0x...">
+                </div>
+                <div>
+                    <label>SecureBank Address:</label>
+                    <input type="text" id="secAddress" placeholder="0x...">
+                </div>
+                <button class="btn btn-primary" onclick="loadContractAddresses()">Load Contracts</button>
+                <button class="btn btn-secondary" onclick="closeAddressModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
+    <script>
+        // Verify ethers loaded
+        if (typeof ethers === 'undefined') {
+            console.error('Ethers.js failed to load from CDN');
+            document.getElementById('errorMessage').textContent = 'Failed to load required libraries. Please check your internet connection and reload.';
+            document.getElementById('errorContainer').classList.remove('hidden');
+        }
+    </script>
+    <script src="app.js"></script>
+</body>
+</html>

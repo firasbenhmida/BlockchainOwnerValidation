@@ -1,0 +1,743 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+\geometry{margin=2.5cm}
+
+% Configuration des listings pour Solidity
+\lstdefinestyle{solidity}{
+    language=Java,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=8pt,
+    backgroundcolor=\color{gray!10},
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    frame=single,
+    tabsize=2,
+    captionpos=b,
+    breaklines=true,
+    breakatwhitespace=false,
+    escapeinside={\%*}{*)},
+    morekeywords={pragma, solidity, contract, function, modifier, require, address, public, payable, uint256, mapping, event, emit}
+}
+
+% En-tête et pied de page
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Audit de Sécurité - Contrôle d'Accès}
+\fancyfoot[C]{\thepage}
+
+% Page de garde personnalisée
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\fontsize{28}{34}\selectfont\textbf{AUDIT DE SÉCURITÉ}}
+    
+    \vspace{0.5cm}
+    
+    {\fontsize{28}{34}\selectfont\textbf{Smart Contracts Ethereum}}
+    
+    \vspace{1.5cm}
+    
+    {\fontsize{20}{24}\selectfont\textbf{Vulnérabilité de Contrôle d'Accès}}
+    
+    \vspace{0.5cm}
+    
+    {\fontsize{16}{20}\selectfont\textit{Analyse et Démonstration d'Exploitation}}
+    
+    \vspace{3cm}
+    
+    {\fontsize{14}{17}\selectfont\textbf{Auteurs}}
+    
+    \vspace{0.3cm}
+    
+    {\fontsize{13}{16}\selectfont Mohamed Firas Ben Hmida}
+    
+    {\fontsize{13}{16}\selectfont Houssem Eddine Ben Chaabane}
+    
+    \vspace{2cm}
+    
+    {\fontsize{12}{15}\selectfont Étude de cas : Fonction \texttt{changeOwner()}}
+    
+    \vspace{3cm}
+    
+    {\fontsize{11}{13}\selectfont TEK-UP University}
+    
+\end{titlepage}
+
+\thispagestyle{empty}
+\newpage
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Audit de Sécurité - Contrôle d'Accès}
+\fancyfoot[C]{\thepage}
+
+% Table des Matières
+\tableofcontents
+\newpage
+
+% Table des Figures
+\listoffigures
+\newpage
+
+%=====================================================================
+% SECTION 1 : INTRODUCTION
+%=====================================================================
+\section{Introduction}
+
+\subsection{Contexte}
+Les smart contracts Ethereum gèrent des milliards de dollars en actifs numériques. Une seule vulnérabilité de sécurité peut entraîner des pertes catastrophiques. Le contrôle d'accès est un aspect fondamental de la sécurité des smart contracts, permettant de restreindre certaines fonctions aux utilisateurs autorisés.
+
+\subsection{Objectifs de l'Audit}
+\begin{itemize}
+    \item Identifier les vulnérabilités de contrôle d'accès dans les smart contracts
+    \item Démontrer l'impact réel d'une exploitation réussie
+    \item Proposer des solutions de sécurisation efficaces
+    \item Établir des bonnes pratiques pour le développement sécurisé
+\end{itemize}
+
+\subsection{Méthodologie}
+\begin{enumerate}
+    \item Analyse du code source (revue manuelle)
+    \item Développement de tests d'exploitation
+    \item Démonstration pratique avec interface web
+    \item Implémentation d'une solution sécurisée
+    \item Tests de validation de la correction
+\end{enumerate}
+
+%=====================================================================
+% SECTION 2 : ANALYSE DE LA VULNÉRABILITÉ
+%=====================================================================
+\section{Analyse de la Vulnérabilité}
+
+\subsection{Description de la Vulnérabilité}
+
+La vulnérabilité identifiée est une \textbf{absence de contrôle d'accès} sur la fonction \texttt{changeOwner()}. Cette fonction critique permet de changer le propriétaire du contrat, mais ne vérifie pas l'identité de l'appelant. Cela signifie que \textbf{n'importe quel utilisateur} peut prendre le contrôle du contrat.
+
+\subsection{Code Vulnérable}
+
+\begin{lstlisting}[style=solidity, caption={VulnerableBank.sol - Fonction vulnérable}]
+contract VulnerableBank {
+    address public owner;
+    mapping(address => uint256) public balances;
+    
+    constructor() {
+        owner = msg.sender;
+    }
+    
+    // VULNERABILITE : Aucun controle d'acces !
+    function changeOwner(address newOwner) public {
+        owner = newOwner;
+        emit OwnerChanged(newOwner);
+    }
+    
+    function emergencyWithdraw() public {
+        require(msg.sender == owner, "Not owner!");
+        payable(owner).transfer(address(this).balance);
+    }
+    
+    // ... autres fonctions
+}
+\end{lstlisting}
+
+\subsection{Impact de la Vulnérabilité}
+
+\textbf{Sévérité : CRITIQUE}
+
+\begin{itemize}
+    \item \textbf{Prise de contrôle totale} : Un attaquant peut devenir propriétaire du contrat
+    \item \textbf{Vol de fonds} : Accès à la fonction \texttt{emergencyWithdraw()} pour voler tous les fonds
+    \item \textbf{Perte irréversible} : Les transactions blockchain sont immuables
+    \item \textbf{Coût d'exploitation} : Très faible (seulement les frais de gas)
+\end{itemize}
+
+\subsection{Architecture du Contrat Vulnérable}
+
+% INSTRUCTION POUR SCREENSHOT 1
+% =============================
+% SCREENSHOT 1 : Code VulnerableBank.sol dans VS Code
+% QUE FAIRE :
+% 1. Ouvrir le fichier contracts/VulnerableBank.sol dans VS Code
+% 2. Faire défiler jusqu'à la fonction changeOwner() (ligne ~60-65)
+% 3. Mettre en surbrillance la fonction changeOwner() complète
+% 4. Capturer l'écran montrant clairement l'absence de modificateur
+% 5. Sauvegarder comme : screenshot1_code_vulnerable.png
+% 6. Décommenter la ligne ci-dessous et compiler le PDF
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{screenshot1_code_vulnerable.png}
+    \caption{Code source de VulnerableBank.sol montrant la fonction changeOwner() sans protection}
+    \label{fig:code_vulnerable}
+\end{figure}
+
+%=====================================================================
+% SECTION 3 : DÉMONSTRATION DE L'EXPLOITATION
+%=====================================================================
+\section{Démonstration de l'Exploitation}
+
+\subsection{Environnement de Test}
+
+\begin{itemize}
+    \item \textbf{Blockchain} : Hardhat Local Network (Chain ID: 1337)
+    \item \textbf{Langage} : Solidity 0.8.20
+    \item \textbf{Framework} : Hardhat 2.22.0
+    \item \textbf{Tests} : Ethers.js v6 + Chai
+    \item \textbf{Interface} : Application Web HTML/CSS/JavaScript + MetaMask
+\end{itemize}
+
+\subsection{Scénario d'Attaque}
+
+\textbf{Étape 1 : État Initial}
+\begin{itemize}
+    \item Propriétaire légitime : \texttt{0xf39F...92266}
+    \item Contrat contient : 1.0 ETH (déposé par des utilisateurs)
+    \item Attaquant : \texttt{0x7099...79C8} (compte non autorisé)
+\end{itemize}
+
+% INSTRUCTION POUR SCREENSHOT 2
+% =============================
+% SCREENSHOT 2 : Interface web - État initial avant l'attaque
+% QUE FAIRE :
+% 1. Se connecter avec le compte Owner (Account 1)
+% 2. Déposer 1 ETH dans VulnerableBank
+% 3. Vérifier que "Owner" montre l'adresse 0xf39F...92266
+% 4. Vérifier que "Contract Balance" montre 1.0 ETH
+% 5. Capturer tout l'écran de l'interface web
+% 6. Sauvegarder comme : screenshot2_etat_initial.png
+% 7. Décommenter la ligne ci-dessous
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{screenshot2_etat_initial.png}
+    \caption{État initial du contrat - 1 ETH déposé par le propriétaire légitime}
+    \label{fig:etat_initial}
+\end{figure}
+
+\textbf{Étape 2 : Changement de Propriétaire (Attaque)}
+
+L'attaquant appelle simplement la fonction \texttt{changeOwner()} avec sa propre adresse en paramètre. Aucune vérification n'est effectuée, la transaction réussit.
+
+% INSTRUCTION POUR SCREENSHOT 3
+% =============================
+% SCREENSHOT 3 : Interface web - Après changement de propriétaire
+% QUE FAIRE :
+% 1. Basculer vers le compte Attacker (Account 2) dans MetaMask
+% 2. Rafraîchir la page et se reconnecter
+% 3. Cliquer sur "Change Owner (Attack!)" dans VulnerableBank
+% 4. Confirmer la transaction dans MetaMask
+% 5. Cliquer sur "Refresh" pour mettre à jour l'affichage
+% 6. IMPORTANT : Vérifier que "Owner" montre maintenant 0x7099...79C8
+% 7. Capturer l'écran montrant le changement d'owner ET le log de transaction
+% 8. Sauvegarder comme : screenshot3_owner_change.png
+% 9. Décommenter la ligne ci-dessous
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{screenshot3_owner_change.png}
+    \caption{Changement de propriétaire réussi - L'attaquant est maintenant owner}
+    \label{fig:owner_change}
+\end{figure}
+
+\textbf{Étape 3 : Vol des Fonds}
+
+Maintenant propriétaire, l'attaquant peut appeler \texttt{emergencyWithdraw()} pour retirer tous les fonds du contrat.
+
+% INSTRUCTION POUR SCREENSHOT 4
+% =============================
+% SCREENSHOT 4 : Interface web - Après vol des fonds
+% QUE FAIRE :
+% 1. Toujours connecté en tant qu'attaquant
+% 2. Cliquer sur "Withdraw Contract Balance" dans VulnerableBank
+% 3. Confirmer la transaction dans MetaMask
+% 4. Cliquer sur "Refresh"
+% 5. IMPORTANT : Vérifier que "Contract Balance" montre maintenant 0.0 ETH
+% 6. Capturer l'écran montrant le solde vide ET le log complet de l'attaque
+% 7. Sauvegarder comme : screenshot4_fonds_voles.png
+% 8. Décommenter la ligne ci-dessous
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{screenshot4_fonds_voles.png}
+    \caption{Vol des fonds réussi - Le contrat est maintenant vide (0.0 ETH)}
+    \label{fig:fonds_voles}
+\end{figure}
+
+\subsection{Résultats de l'Exploitation}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Paramètre} & \textbf{Avant Attaque} & \textbf{Après Attaque} \\
+\hline
+Propriétaire & 0xf39F...92266 & 0x7099...79C8 \\
+Solde du contrat & 1.0 ETH & 0.0 ETH \\
+Solde de l'attaquant & 10000.0 ETH & 10001.0 ETH \\
+Transactions malveillantes & 0 & 2 \\
+\hline
+\end{tabular}
+\caption{Impact de l'exploitation sur le contrat}
+\label{tab:impact}
+\end{table}
+
+\subsection{Résultats des Tests Automatisés}
+
+% INSTRUCTION POUR SCREENSHOT 5
+% =============================
+% SCREENSHOT 5 : Résultats des tests (npx hardhat test)
+% QUE FAIRE :
+% 1. Ouvrir un nouveau terminal PowerShell
+% 2. Naviguer vers C:\BlockChain\AccessControlProject
+% 3. Exécuter : npx hardhat test
+% 4. Attendre que tous les 12 tests passent (✓ passing)
+% 5. Capturer l'écran montrant TOUS les résultats des tests
+% 6. Important : Montrer les tests VulnerableBank ET SecureBank
+% 7. Sauvegarder comme : screenshot5_tests_results.png
+% 8. Décommenter la ligne ci-dessous
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{screenshot5_tests_results.png}
+    \caption{Résultats des tests automatisés - 12 tests passés avec succès}
+    \label{fig:tests}
+\end{figure}
+
+Les tests automatisés confirment la vulnérabilité :
+\begin{itemize}
+    \item ✅ \textbf{VulnerableBank} : L'attaquant PEUT changer le propriétaire
+    \item ✅ \textbf{VulnerableBank} : L'attaquant PEUT voler tous les fonds
+    \item ✅ \textbf{SecureBank} : L'attaquant NE PEUT PAS changer le propriétaire
+    \item ✅ \textbf{SecureBank} : Les fonds sont protégés
+\end{itemize}
+
+%=====================================================================
+% SECTION 4 : SOLUTION DE SÉCURISATION
+%=====================================================================
+\section{Solution de Sécurisation}
+
+\subsection{Implémentation du Modificateur onlyOwner}
+
+La solution consiste à ajouter un \textbf{modificateur de contrôle d'accès} qui vérifie l'identité de l'appelant avant d'exécuter la fonction.
+
+\begin{lstlisting}[style=solidity, caption={SecureBank.sol - Contrat sécurisé avec modificateur}]
+contract SecureBank {
+    address public owner;
+    mapping(address => uint256) public balances;
+    
+    constructor() {
+        owner = msg.sender;
+    }
+    
+    // MODIFICATEUR DE SECURITE
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not owner!");
+        _;
+    }
+    
+    // FONCTION SECURISEE avec modificateur
+    function changeOwner(address newOwner) public onlyOwner {
+        require(newOwner != address(0), "Invalid address");
+        owner = newOwner;
+        emit OwnerChanged(newOwner);
+    }
+    
+    function emergencyWithdraw() public onlyOwner {
+        payable(owner).transfer(address(this).balance);
+    }
+    
+    // ... autres fonctions
+}
+\end{lstlisting}
+
+\subsection{Explication Technique}
+
+\textbf{Modificateur \texttt{onlyOwner}} :
+\begin{itemize}
+    \item \texttt{require(msg.sender == owner)} : Vérifie que l'appelant est le propriétaire
+    \item Si la condition échoue : la transaction est annulée (revert) avec le message "Not owner!"
+    \item Si la condition réussit : l'exécution continue avec \texttt{\_;}
+\end{itemize}
+
+\textbf{Avantages de cette solution} :
+\begin{itemize}
+    \item ✅ Simple à implémenter
+    \item ✅ Réutilisable sur plusieurs fonctions
+    \item ✅ Code plus lisible et maintenable
+    \item ✅ Coût en gas minimal
+    \item ✅ Standard de l'industrie (OpenZeppelin)
+\end{itemize}
+
+% INSTRUCTION POUR SCREENSHOT 6
+% =============================
+% SCREENSHOT 6 : Code SecureBank.sol dans VS Code
+% QUE FAIRE :
+% 1. Ouvrir le fichier contracts/SecureBank.sol dans VS Code
+% 2. Faire défiler pour montrer le modificateur onlyOwner (ligne ~25-28)
+% 3. Montrer aussi la fonction changeOwner() avec le modificateur (ligne ~60-65)
+% 4. Utiliser split screen pour montrer les deux en même temps si possible
+% 5. Capturer l'écran montrant clairement le modificateur
+% 6. Sauvegarder comme : screenshot6_code_secure.png
+% 7. Décommenter la ligne ci-dessous
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{screenshot6_code_secure.png}
+    \caption{Code source de SecureBank.sol avec le modificateur onlyOwner}
+    \label{fig:code_secure}
+\end{figure}
+
+\subsection{Validation de la Correction}
+
+% INSTRUCTION POUR SCREENSHOT 7
+% =============================
+% SCREENSHOT 7 : Interface web - Tentative d'attaque bloquée
+% QUE FAIRE :
+% 1. Redéployer les contrats (npx hardhat run scripts/deploy.js --network localhost)
+% 2. Rafraîchir l'interface web et reconnecter MetaMask
+% 3. Se connecter avec le compte Attacker (Account 2)
+% 4. Dans SecureBank, cliquer sur "Try Change Owner"
+% 5. Confirmer la transaction dans MetaMask
+% 6. IMPORTANT : Vérifier que le log montre "Not owner!" error
+% 7. Capturer l'écran montrant l'erreur dans le log de transactions
+% 8. Sauvegarder comme : screenshot7_attaque_bloquee.png
+% 9. Décommenter la ligne ci-dessous
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{screenshot7_attaque_bloquee.png}
+    \caption{Tentative d'attaque bloquée après changement de propriétaire - Impossible de retirer les fonds ("Not owner!")}
+    \label{fig:attaque_bloquee}
+\end{figure}
+
+Les tests confirment que la correction fonctionne :
+\begin{itemize}
+    \item ❌ L'attaquant ne peut plus changer le propriétaire
+    \item ❌ La transaction échoue avec l'erreur "Not owner!"
+    \item ✅ Le propriétaire légitime peut toujours effectuer l'opération
+    \item ✅ Les fonds sont protégés contre le vol
+\end{itemize}
+
+%=====================================================================
+% SECTION 5 : COMPARAISON ET ANALYSE
+%=====================================================================
+\section{Comparaison des Deux Contrats}
+
+\subsection{Tableau Comparatif}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Aspect} & \textbf{VulnerableBank} & \textbf{SecureBank} \\
+\hline
+Modificateur onlyOwner & ❌ Non & ✅ Oui \\
+Protection changeOwner() & ❌ Non & ✅ Oui \\
+Attaque possible & ✅ Oui & ❌ Non \\
+Vol de fonds possible & ✅ Oui & ❌ Non \\
+Validation d'adresse & ❌ Non & ✅ Oui \\
+Sécurité & 🔴 CRITIQUE & 🟢 SÉCURISÉ \\
+Complexité du code & Simple & Simple+ \\
+Coût en gas & Faible & Faible+ \\
+\hline
+\end{tabular}
+\caption{Comparaison entre VulnerableBank et SecureBank}
+\label{tab:comparaison}
+\end{table}
+
+\subsection{Analyse des Coûts}
+
+\textbf{Coût de l'attaque} :
+\begin{itemize}
+    \item Transaction changeOwner() : ~30,000 gas (~\$0.60 à 20 gwei)
+    \item Transaction emergencyWithdraw() : ~25,000 gas (~\$0.50 à 20 gwei)
+    \item \textbf{Total} : ~\$1.10 pour voler potentiellement des millions
+\end{itemize}
+
+\textbf{Coût de la sécurisation} :
+\begin{itemize}
+    \item Ajout du modificateur : ~200 gas supplémentaires par appel
+    \item Impact négligeable sur le coût total
+    \item \textbf{ROI} : Protection contre des pertes potentielles illimitées
+\end{itemize}
+
+%=====================================================================
+% SECTION 6 : EXEMPLES RÉELS
+%=====================================================================
+\section{Cas Réels de Vulnérabilités Similaires}
+
+\subsection{Incidents Historiques}
+
+\textbf{1. Parity Multi-Sig Wallet (2017)}
+\begin{itemize}
+    \item \textbf{Montant perdu} : 150+ millions USD
+    \item \textbf{Cause} : Fonction d'initialisation non protégée
+    \item \textbf{Impact} : Fonds gelés définitivement
+\end{itemize}
+
+\textbf{2. Rubixi Contract (2016)}
+\begin{itemize}
+    \item \textbf{Montant perdu} : Plusieurs ETH
+    \item \textbf{Cause} : Fonction de changement de créateur publique
+    \item \textbf{Impact} : Prise de contrôle par un attaquant
+\end{itemize}
+
+\textbf{3. DeFi Exploits (2020-2023)}
+\begin{itemize}
+    \item Multiples protocoles DeFi attaqués
+    \item Fonctions administratives non protégées
+    \item Pertes cumulées : plusieurs centaines de millions USD
+\end{itemize}
+
+\subsection{Leçons Apprises}
+
+\begin{itemize}
+    \item Le contrôle d'accès est \textbf{critique} pour toute fonction sensible
+    \item Les audits de sécurité sont \textbf{essentiels} avant le déploiement
+    \item Utiliser des \textbf{bibliothèques éprouvées} (OpenZeppelin)
+    \item Implémenter des \textbf{tests exhaustifs} couvrant les cas d'attaque
+    \item La \textbf{simplicité} du code réduit les risques d'erreur
+\end{itemize}
+
+%=====================================================================
+% SECTION 7 : RECOMMANDATIONS
+%=====================================================================
+\section{Recommandations et Bonnes Pratiques}
+
+\subsection{Contrôle d'Accès}
+
+\begin{enumerate}
+    \item \textbf{Utiliser OpenZeppelin Ownable}
+    \begin{lstlisting}[style=solidity]
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MyContract is Ownable {
+    // Le contrat herite automatiquement du modificateur onlyOwner
+    function sensitiveFunction() public onlyOwner {
+        // Code protege
+    }
+}
+    \end{lstlisting}
+
+    \item \textbf{Implémenter le contrôle d'accès basé sur les rôles (RBAC)}
+    \begin{lstlisting}[style=solidity]
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+contract MyContract is AccessControl {
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    
+    function adminFunction() public onlyRole(ADMIN_ROLE) {
+        // Fonction reservee aux admins
+    }
+}
+    \end{lstlisting}
+
+    \item \textbf{Principe du moindre privilège} : Limiter les permissions au strict nécessaire
+
+    \item \textbf{Séparation des rôles} : Distinguer owner, admin, operator, etc.
+\end{enumerate}
+
+\subsection{Tests de Sécurité}
+
+\begin{enumerate}
+    \item \textbf{Tests unitaires complets}
+    \begin{itemize}
+        \item Tester chaque fonction avec utilisateur autorisé
+        \item Tester chaque fonction avec utilisateur non autorisé
+        \item Vérifier les messages d'erreur appropriés
+    \end{itemize}
+
+    \item \textbf{Tests d'intégration}
+    \begin{itemize}
+        \item Scénarios d'attaque complets
+        \item Interactions entre contrats
+        \item Edge cases et conditions limites
+    \end{itemize}
+
+    \item \textbf{Fuzzing et tests automatisés}
+    \begin{itemize}
+        \item Utiliser Echidna ou Foundry pour le fuzzing
+        \item Tests de propriétés avec assertions
+        \item CI/CD avec tests automatiques
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Audits et Revue de Code}
+
+\begin{enumerate}
+    \item \textbf{Audit de sécurité professionnel}
+    \begin{itemize}
+        \item Obligatoire avant le déploiement en production
+        \item Entreprises réputées : ConsenSys, Trail of Bits, OpenZeppelin
+    \end{itemize}
+
+    \item \textbf{Revue par les pairs}
+    \begin{itemize}
+        \item Code review systématique
+        \item Checklist de sécurité
+        \item Documentation complète
+    \end{itemize}
+
+    \item \textbf{Bug Bounty Programs}
+    \begin{itemize}
+        \item Récompenser la découverte de vulnérabilités
+        \item Plateformes : Immunefi, HackerOne
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Déploiement Sécurisé}
+
+\begin{enumerate}
+    \item \textbf{Tests sur testnet} : Ropsten, Goerli, Sepolia
+    \item \textbf{Déploiement progressif} : Commencer avec des montants limités
+    \item \textbf{Monitoring en temps réel} : Alertes sur transactions suspectes
+    \item \textbf{Circuit breaker} : Possibilité de pause en cas d'urgence
+    \item \textbf{Upgrade pattern} : Prévoir la mise à jour du contrat si nécessaire
+\end{enumerate}
+
+%=====================================================================
+% SECTION 8 : CONCLUSION
+%=====================================================================
+\section{Conclusion}
+
+\subsection{Résumé des Découvertes}
+
+Cet audit a démontré l'impact critique d'une vulnérabilité de contrôle d'accès :
+
+\begin{itemize}
+    \item ✅ \textbf{Vulnérabilité identifiée} : Absence de modificateur onlyOwner sur changeOwner()
+    \item ✅ \textbf{Exploitation réussie} : Prise de contrôle et vol de tous les fonds
+    \item ✅ \textbf{Solution implémentée} : Ajout du modificateur de contrôle d'accès
+    \item ✅ \textbf{Validation complète} : Tests automatisés et démonstration web
+\end{itemize}
+
+\subsection{Impact de la Vulnérabilité}
+
+\textbf{Sans protection} :
+\begin{itemize}
+    \item Coût d'exploitation : ~\$1
+    \item Temps d'exploitation : < 2 minutes
+    \item Pertes potentielles : Illimitées
+    \item Détection : Possible mais souvent trop tard
+\end{itemize}
+
+\textbf{Avec protection} :
+\begin{itemize}
+    \item Coût supplémentaire : ~200 gas par transaction
+    \item Protection : 100\% contre ce type d'attaque
+    \item Conformité : Standards de l'industrie
+\end{itemize}
+
+\subsection{Perspectives}
+
+Le contrôle d'accès est une pierre angulaire de la sécurité des smart contracts. Ce projet démontre que :
+
+\begin{enumerate}
+    \item Les vulnérabilités simples peuvent avoir des conséquences catastrophiques
+    \item Les solutions existent et sont faciles à implémenter
+    \item Les tests et la validation sont essentiels
+    \item La sécurité doit être intégrée dès la conception
+\end{enumerate}
+
+\subsection{Travaux Futurs}
+
+\begin{itemize}
+    \item Extension à d'autres types de vulnérabilités (reentrancy, overflow, etc.)
+    \item Implémentation d'un système de gouvernance décentralisé
+    \item Intégration avec des outils d'analyse statique (Slither, Mythril)
+    \item Déploiement sur testnet public pour démonstration étendue
+\end{itemize}
+
+%=====================================================================
+% ANNEXES
+%=====================================================================
+\newpage
+\appendix
+
+\section{Configuration de l'Environnement}
+
+\subsection{Prérequis}
+\begin{itemize}
+    \item Node.js 20.x ou supérieur
+    \item npm 9.x ou supérieur
+    \item MetaMask (extension navigateur)
+    \item Git (optionnel)
+\end{itemize}
+
+\subsection{Installation}
+
+\begin{lstlisting}[language=bash, caption={Installation du projet}]
+# Cloner le repository
+git clone https://github.com/votre-repo/AccessControlProject
+cd AccessControlProject
+
+# Installer les dependances
+npm install
+
+# Compiler les contrats
+npx hardhat compile
+
+# Lancer les tests
+npx hardhat test
+
+# Demarrer le noeud local
+npx hardhat node
+
+# Deployer les contrats
+npx hardhat run scripts/deploy.js --network localhost
+\end{lstlisting}
+
+\section{Structure du Projet}
+
+\begin{lstlisting}[language=bash]
+AccessControlProject/
+├── contracts/
+│   ├── VulnerableBank.sol    # Contrat vulnerable
+│   └── SecureBank.sol         # Contrat securise
+├── test/
+│   └── AccessControl.test.js  # Suite de tests (12 tests)
+├── scripts/
+│   └── deploy.js              # Script de deploiement
+├── public/
+│   ├── index.html             # Interface web
+│   ├── style.css              # Styles
+│   └── app.js                 # Logique MetaMask
+├── hardhat.config.js          # Configuration Hardhat
+└── package.json               # Dependances npm
+\end{lstlisting}
+
+\section{Adresses des Contrats Déployés}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Contrat} & \textbf{Adresse} \\
+\hline
+VulnerableBank & 0x5FbDB2315678afecb367f032d93F642f64180aa3 \\
+SecureBank & 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 \\
+\hline
+\end{tabular}
+\caption{Adresses des contrats sur le réseau local Hardhat}
+\end{table}
+
+\end{document}
