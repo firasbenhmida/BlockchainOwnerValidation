@@ -7,7 +7,7 @@ A comprehensive security audit demonstrating a critical access control vulnerabi
 This project demonstrates a **critical access control vulnerability** where unauthorized users can take complete ownership of a smart contract and steal all funds. It includes both vulnerable and secure implementations, along with comprehensive testing and an interactive web demonstration.
 
 ### 🎥 Demo Video
-[![Watch Demo](https://img.youtube.com/vi/JUdRTMknOAo/0.jpg)](https://youtu.be/JUdRTMknOAo)
+[![Watch Demo]([https://img.youtube.com/vi/JUdRTMknOAo/0.jpg)](https://youtu.be/JUdRTMknOAo](https://youtu.be/zJ4t5383iAE))
 
 ## 🚨 Vulnerability Demonstrated
 
