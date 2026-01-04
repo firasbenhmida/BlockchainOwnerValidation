@@ -168,6 +168,26 @@
         </div>
     </div>
 
+    <!-- New Owner Address Modal -->
+    <div id="newOwnerModal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close" onclick="closeNewOwnerModal()">&times;</span>
+            <h2>🔄 Change Contract Owner</h2>
+            <p class="modal-description">Enter the address of the new owner:</p>
+            <div class="address-form">
+                <div>
+                    <label>New Owner Address:</label>
+                    <input type="text" id="newOwnerAddress" placeholder="0x..." style="width: 100%;">
+                    <p class="info-text" style="margin-top: 10px;">
+                        💡 Tip: Use your current address (<code id="currentAddressHint" style="font-size: 0.9em;">-</code>) to transfer ownership to yourself
+                    </p>
+                </div>
+                <button class="btn btn-primary" onclick="confirmChangeOwner()">Change Owner</button>
+                <button class="btn btn-secondary" onclick="closeNewOwnerModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
     <script>

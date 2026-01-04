@@ -252,13 +252,21 @@ async function vulnWithdraw() {
     }
 }
 
+// Global variable to track which contract is being used
+let currentContractType = null;
+
 async function vulnChangeOwner() {
+    currentContractType = 'vulnerable';
+    openNewOwnerModal();
+}
+
+async function executeVulnChangeOwner(newOwnerAddress) {
     try {
-        addLog('🚨 ATTACK: Trying to change owner in VulnerableBank...', 'error');
-        const tx = await vulnerableBank.changeOwner(userAddress);
+        addLog('🚨 ATTACK: Trying to change owner in VulnerableBank to ' + newOwnerAddress + '...', 'error');
+        const tx = await vulnerableBank.changeOwner(newOwnerAddress);
         addLog('⏳ Transaction pending: ' + tx.hash, 'info');
         await tx.wait();
-        addLog('❌ VULNERABILITY CONFIRMED: Successfully changed owner! Anyone can do this!', 'error');
+        addLog('❌ VULNERABILITY CONFIRMED: Successfully changed owner to ' + newOwnerAddress + '! Anyone can do this!', 'error');
         await refreshVulnerable();
     } catch (error) {
         addLog('⚠️ Change owner failed: ' + error.message, 'error');
@@ -314,12 +322,17 @@ async function secWithdraw() {
 }
 
 async function secChangeOwner() {
+    currentContractType = 'secure';
+    openNewOwnerModal();
+}
+
+async function executeSecChangeOwner(newOwnerAddress) {
     try {
-        addLog('🔒 Trying to change owner in SecureBank (should fail)...', 'info');
-        const tx = await secureBank.changeOwner(userAddress);
+        addLog('🔒 Trying to change owner in SecureBank to ' + newOwnerAddress + ' (should fail)...', 'info');
+        const tx = await secureBank.changeOwner(newOwnerAddress);
         addLog('⏳ Transaction pending: ' + tx.hash, 'info');
         await tx.wait();
-        addLog('❌ Unexpected: Change owner succeeded', 'error');
+        addLog('❌ Unexpected: Change owner succeeded to ' + newOwnerAddress, 'error');
         await refreshSecure();
     } catch (error) {
         if (error.message.includes('Not owner')) {
@@ -387,6 +400,55 @@ function showError(message) {
     document.getElementById('mainSection').classList.add('hidden');
     document.getElementById('errorMessage').textContent = message;
     console.error('❌', message);
+}
+
+// ============================================
+// NEW OWNER MODAL FUNCTIONS
+// ============================================
+
+function openNewOwnerModal() {
+    const modal = document.getElementById('newOwnerModal');
+    const addressHint = document.getElementById('currentAddressHint');
+    const inputField = document.getElementById('newOwnerAddress');
+    
+    // Set the current address hint
+    addressHint.textContent = userAddress;
+    
+    // Clear previous input
+    inputField.value = '';
+    
+    // Show modal
+    modal.classList.remove('hidden');
+}
+
+function closeNewOwnerModal() {
+    const modal = document.getElementById('newOwnerModal');
+    modal.classList.add('hidden');
+}
+
+async function confirmChangeOwner() {
+    const newOwnerAddress = document.getElementById('newOwnerAddress').value.trim();
+    
+    // Validate address
+    if (!newOwnerAddress) {
+        alert('Please enter a valid address');
+        return;
+    }
+    
+    if (!ethers.isAddress(newOwnerAddress)) {
+        alert('Invalid Ethereum address format');
+        return;
+    }
+    
+    // Close modal
+    closeNewOwnerModal();
+    
+    // Execute based on contract type
+    if (currentContractType === 'vulnerable') {
+        await executeVulnChangeOwner(newOwnerAddress);
+    } else if (currentContractType === 'secure') {
+        await executeSecChangeOwner(newOwnerAddress);
+    }
 }
 
 // ============================================
