@@ -20,9 +20,13 @@ const BANK_ABI = [
     "function getContractBalance() public view returns (uint256)"
 ];
 
-// Contract addresses (will be set by user)
-let vulnerableBankAddress = localStorage.getItem('vulnerableBankAddress');
-let secureBankAddress = localStorage.getItem('secureBankAddress');
+// Deterministic default addresses for Hardhat local node
+const DEFAULT_VULN_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+const DEFAULT_SEC_ADDRESS  = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
+
+// Contract addresses (persisted) fall back to defaults
+let vulnerableBankAddress = localStorage.getItem('vulnerableBankAddress') || DEFAULT_VULN_ADDRESS;
+let secureBankAddress = localStorage.getItem('secureBankAddress') || DEFAULT_SEC_ADDRESS;
 
 let vulnerableBank;
 let secureBank;
@@ -35,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Page loaded');
     setupEventListeners();
     
-    // Check if contracts are already loaded
+    // Check if contracts are already loaded (or using defaults)
     if (vulnerableBankAddress && secureBankAddress) {
         document.getElementById('deployBtn').classList.remove('hidden');
     }
@@ -47,6 +51,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function setupEventListeners() {
     document.getElementById('connectBtn').addEventListener('click', connectWallet);
+    const defaultsBtn = document.getElementById('useDefaultsBtn');
+    if (defaultsBtn) {
+        defaultsBtn.addEventListener('click', useDefaultAddresses);
+    }
 }
 
 // ============================================
@@ -69,7 +77,7 @@ async function connectWallet() {
         console.log('✅ Connected account:', userAddress);
 
         // Create provider and signer
-        provider = new ethers.BrowserProvider(window.ethereum);
+        provider = new ethers.BrowserProvider(window.ethereum, 1337); // expect local Hardhat chainId 1337
         signer = await provider.getSigner();
 
         // Get balance
@@ -79,14 +87,24 @@ async function connectWallet() {
         // Update UI
         updateConnectionStatus();
         
-        // Show deploy button
+        // Show deploy button and defaults button
         document.getElementById('deployBtn').classList.remove('hidden');
         document.getElementById('deployBtn').addEventListener('click', openAddressModal);
-
-        // If contracts are loaded, show main section
-        if (vulnerableBankAddress && secureBankAddress) {
-            await loadContracts();
+        const defaultsBtn = document.getElementById('useDefaultsBtn');
+        if (defaultsBtn) {
+            defaultsBtn.classList.remove('hidden');
         }
+
+        // Auto-apply defaults to avoid copy/paste when nothing is stored
+        if (!localStorage.getItem('vulnerableBankAddress') || !localStorage.getItem('secureBankAddress')) {
+            localStorage.setItem('vulnerableBankAddress', DEFAULT_VULN_ADDRESS);
+            localStorage.setItem('secureBankAddress', DEFAULT_SEC_ADDRESS);
+            vulnerableBankAddress = DEFAULT_VULN_ADDRESS;
+            secureBankAddress = DEFAULT_SEC_ADDRESS;
+        }
+
+        // Load contracts immediately
+        await loadContracts();
 
     } catch (error) {
         console.error('❌ Connection error:', error);
@@ -148,6 +166,15 @@ async function loadContractAddresses() {
     await loadContracts();
 }
 
+// Allow quick use of defaults without opening modal
+async function useDefaultAddresses() {
+    localStorage.setItem('vulnerableBankAddress', DEFAULT_VULN_ADDRESS);
+    localStorage.setItem('secureBankAddress', DEFAULT_SEC_ADDRESS);
+    vulnerableBankAddress = DEFAULT_VULN_ADDRESS;
+    secureBankAddress = DEFAULT_SEC_ADDRESS;
+    await loadContracts();
+}
+
 async function loadContracts() {
     try {
         if (!signer) {
@@ -156,6 +183,14 @@ async function loadContracts() {
         }
 
         console.log('📦 Loading contracts...');
+
+        // Validate that contracts actually exist at the addresses (node restart wipes them)
+        const vulnCode = await provider.getCode(vulnerableBankAddress);
+        const secCode = await provider.getCode(secureBankAddress);
+        if (vulnCode === '0x' || secCode === '0x') {
+            showError('No contract code found at the stored addresses. Restart node, redeploy, then click "Use Default Local Contracts" or paste fresh addresses.');
+            return;
+        }
 
         // Load contract instances
         vulnerableBank = new ethers.Contract(vulnerableBankAddress, BANK_ABI, signer);
@@ -185,9 +220,10 @@ async function loadContracts() {
 
 async function refreshVulnerable() {
     try {
+        const currentAddr = userAddress || (signer && await signer.getAddress());
         const owner = await vulnerableBank.owner();
         const balance = await vulnerableBank.getContractBalance();
-        const userBalance = await vulnerableBank.getBalance(userAddress);
+        const userBalance = currentAddr ? await vulnerableBank.getBalance(currentAddr) : 0n;
 
         document.getElementById('vuln-owner').textContent = owner;
         document.getElementById('vuln-balance').textContent = ethers.formatEther(balance).substring(0, 6);
@@ -202,9 +238,10 @@ async function refreshVulnerable() {
 
 async function refreshSecure() {
     try {
+        const currentAddr = userAddress || (signer && await signer.getAddress());
         const owner = await secureBank.owner();
         const balance = await secureBank.getContractBalance();
-        const userBalance = await secureBank.getBalance(userAddress);
+        const userBalance = currentAddr ? await secureBank.getBalance(currentAddr) : 0n;
 
         document.getElementById('sec-owner').textContent = owner;
         document.getElementById('sec-balance').textContent = ethers.formatEther(balance).substring(0, 6);
